@@ -7,10 +7,14 @@ class BasePage:
     def __init__(self, driver):
         self.driver = driver
         self.wait = WebDriverWait(driver, 20)
+        self.url = None  # Инициализируем, чтобы избежать ошибок при обращении
 
     @step("Открытие страницы")
-    def open(self, url):
-        self.driver.get(url)
+    def open(self):
+        if not self.url:
+            raise ValueError(f"URL не задан для страницы {self.__class__.__name__}."
+                             f" Определите self.url в __init__ дочернего класса.")
+        self.driver.get(self.url)
 
     @step("Ожидание элемента")
     def wait_for_element(self, locator):
