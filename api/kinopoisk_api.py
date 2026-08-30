@@ -1,4 +1,5 @@
 import requests
+from behave import step
 from config import API_URL, API_KEY
 
 class KinopoiskAPI:

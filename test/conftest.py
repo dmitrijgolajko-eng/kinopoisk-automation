@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from api.kinopoisk_api import KinopoiskAPI
 from pages.base_page import BasePage
+import allure
 
 @pytest.fixture(scope="session")
 def api_client():
@@ -13,9 +14,13 @@ def api_client():
 def driver():
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Раскомментировать для запуска без GUI
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
     driver = webdriver.Chrome(service=service, options=options)
-    driver.maximize_window()
+    driver.implicitly_wait(10)
     yield driver
     driver.quit()
 
@@ -23,13 +28,13 @@ def driver():
 def base_page(driver):
     return BasePage(driver)
 
-# Маркер для UI тестов
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers",
-        "ui: Mark test as UI test"
-    )
-    config.addinivalue_line(
-        "markers",
-        "api: Mark test as API test"
-    )
+    config.addinivalue_line("markers", "ui: Mark test as UI test")
+    config.addinivalue_line("markers", "api: Mark test as API test")
+
+    # Allure environment лучше задавать не здесь, а через allure-properties или env vars
+    # allure.environment(browser="Chrome", platform="Windows")
+
+def pytest_collection_modifyitems(config, items):
+    # Опционально: можно добавить логику фильтрации или сортировки тестов
+    pass

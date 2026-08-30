@@ -1,3 +1,9 @@
+from behave import step
+from selenium.webdriver.common.by import By
+
+from pages.base_page import BasePage
+
+
 class ProfilePage(BasePage):
     WATCHLIST = (By.CSS_SELECTOR, ".watchlist")
     FAVORITES = (By.CSS_SELECTOR, ".favorites")

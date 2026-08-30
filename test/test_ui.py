@@ -1,4 +1,5 @@
 # test_ui.py
+from behave import step  # или другой подходящий импорт
 
 import pytest
 from allure import title, story, step

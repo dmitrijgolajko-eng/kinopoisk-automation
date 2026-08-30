@@ -1,3 +1,9 @@
+from behave import step
+from selenium.webdriver.common.by import By
+
+from pages.base_page import BasePage
+
+
 class MoviePage(BasePage):
     MOVIE_TITLE = (By.CSS_SELECTOR, ".movie-title")
     WATCH_BUTTON = (By.CSS_SELECTOR, ".watch-button")
