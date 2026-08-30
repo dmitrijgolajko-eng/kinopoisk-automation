@@ -1,14 +1,14 @@
 import requests
-from config import API_URL, API_KEY
+from config import KP_API_URL, KP_API_KEY
 
 
 class KinopoiskAPI:
     def __init__(self):
-        self.base_url = API_URL
+        self.base_url = KP_API_URL
         # Выносим версию API в атрибут, чтобы легко менять в одном месте
         self.api_version = "v1.4"
         self.headers = {
-            "X-API-KEY": API_KEY,
+            "X-API-KEY": KP_API_KEY,
             "Content-Type": "application/json"
         }
 

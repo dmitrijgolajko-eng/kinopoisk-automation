@@ -1,3 +1,9 @@
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Теперь эти импорты должны сработать
+from api.kinopoisk_api import KinopoiskAPI
+
 import os
 import pytest
 from selenium import webdriver
