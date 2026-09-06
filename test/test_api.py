@@ -1,4 +1,5 @@
 import pytest
+import requests
 from allure import title, story, step
 from api.kinopoisk_api import KinopoiskAPI
 
@@ -190,3 +191,96 @@ def test_get_movie_rating(api_client: KinopoiskAPI):
             assert "language" in name_info, "Отсутствует информация о языке названия"
             assert "name" in name_info, "Отсутствует само название"
             assert "type" in name_info, "Отсутствует тип названия"
+
+@pytest.mark.api
+@story("API пагинация результатов")
+@title("Проверка корректности пагинации при поиске фильмов")
+def test_api_search_pagination(api_client: KinopoiskAPI):
+    search_query = "Star Wars"
+
+    with step(f"Запрашиваем первую страницу поиска по '{search_query}'"):
+        response_page1 = api_client.search_movies(search_query)
+
+    with step("Проверяем структуру ответа первой страницы"):
+        assert isinstance(response_page1, dict)
+        assert response_page1.get("page") == 1, "Текущая страница должна быть 1"
+        total = response_page1.get("total", 0)
+        pages = response_page1.get("pages", 1)
+        assert pages >= 1, "Должна быть хотя бы одна страница"
+        docs1 = response_page1.get("docs", [])
+        assert len(docs1) > 0, "Первая страница не должна быть пустой"
+
+    with step("Запрашиваем вторую страницу (если результатов больше одной страницы)"):
+        if pages > 1:
+            response_page2 = api_client.search_movies(search_query, page=2)
+
+            with step("Проверяем структуру ответа второй страницы"):
+                assert isinstance(response_page2, dict)
+                assert response_page2.get("page") == 2, "Текущая страница должна быть 2"
+                docs2 = response_page2.get("docs", [])
+                assert len(docs2) > 0, "Вторая страница не должна быть пустой"
+
+            with step("Проверяем, что результаты на разных страницах не дублируются"):
+                ids_page1 = {movie.get("id") for movie in docs1}
+                ids_page2 = {movie.get("id") for movie in docs2}
+                overlap = ids_page1 & ids_page2
+                assert len(overlap) == 0, f"Найдены дубликаты ID между страницами: {overlap}"
+        else:
+            with step("Результатов меньше одной страницы — пагинация не требуется"):
+                print(f"Всего страниц: {pages}. Пагинация не проверяется (достаточно одной страницы).")
+
+@pytest.mark.api
+@story("API обработка несуществующих данных")
+@title("Проверка запроса фильма с несуществующим ID")
+def test_api_get_nonexistent_movie(api_client: KinopoiskAPI):
+    nonexistent_id = 999999999
+
+    with step(f"Запрашиваем фильм с несуществующим ID {nonexistent_id}"):
+        try:
+            response = api_client.get_movie_by_id(movie_id=nonexistent_id)
+            # Если исключения не было — проверяем, что ответ пустой
+            if isinstance(response, dict):
+                assert "name" not in response, "API вернул данные фильма для несуществующего ID"
+                print(f"✅ API вернул пустой ответ для несуществующего ID")
+        except requests.exceptions.HTTPError as e:
+            # 400 — корректный ответ API на несуществующий ID
+            status = e.response.status_code
+            assert status in (400, 404), \
+                f"Ожидался код 400 или 404, получен {status}"
+            print(f"✅ API вернул код {status} для несуществующего ID — корректная обработка")
+
+@pytest.mark.api
+@story("API фильтрация результатов")
+@title("Проверка поиска фильма с фильтром по году и типу")
+
+@pytest.mark.api
+@story("API фильтрация результатов")
+@title("Проверка поиска фильма с фильтром по году и типу")
+def test_api_search_with_filters(api_client: KinopoiskAPI):
+    search_query = "Dune"
+    target_year = 2021
+    target_type = "movie"
+
+    with step(f"Ищем '{search_query}' с фильтром: год={target_year}, тип={target_type}"):
+        response = api_client.search_movies_with_filters(
+            search_query, year=target_year, type=target_type
+        )
+
+    with step("Проверяем структуру ответа"):
+        assert isinstance(response, dict), "Ответ должен быть словарем"
+        assert "docs" in response, "В ответе отсутствует поле 'docs'"
+        docs = response["docs"]
+        assert isinstance(docs, list), "Поле 'docs' должно быть списком"
+        assert len(docs) > 0, "Список результатов пуст после применения фильтров"
+
+    with step("Проверяем, что все результаты соответствуют фильтрам"):
+        for i, movie in enumerate(docs):
+            with step(f"Проверяем результат #{i + 1}: '{movie.get('name')}'"):
+                movie_type = movie.get("type")
+                assert movie_type == target_type, \
+                    f"Тип контента не совпадает: ожидаем '{target_type}', получаем '{movie_type}'"
+
+                movie_year = movie.get("year")
+                if movie_year is not None:
+                    assert movie_year == target_year, \
+                        f"Год не совпадает: ожидаем {target_year}, получаем {movie_year}"

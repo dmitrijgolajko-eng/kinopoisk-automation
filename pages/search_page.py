@@ -1,67 +1,78 @@
-from behave import step
+# pages/search_page.py
+from .base_page import BasePage
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from pages.base_page import BasePage
+from selenium.webdriver.common.action_chains import ActionChains
+import time
 
 
 class SearchPage(BasePage):
-    # Поле поиска и кнопка (как было ранее)
-    SEARCH_INPUT = (By.CSS_SELECTOR, 'input[role="combobox"][placeholder*="Фильмы"]')
-    SEARCH_BUTTON = (By.CSS_SELECTOR, 'button[type="submit"][aria-label="Найти"]')
+    # Локатор для ссылки в выпадающем списке подсказок
+    SUGGESTION_LINK_LOCATOR = (By.CSS_SELECTOR, "a[href*='/film/']")
 
-    # Вкладки
-    ALL_RESULTS_TAB = (By.CSS_SELECTOR, 'button[id="all"][role="tab"]')
-    ONLINE_CINEMA_TAB = (By.CSS_SELECTOR, 'button[id="online"][role="tab"]')
-    # Альтернатива по data-tid (если в проекте это предпочтительный способ)
-    # ONLINE_CINEMA_TAB = (By.CSS_SELECTOR, 'button[data-tid="2ad66cc9"]')
+    # Локатор для проверки финальной страницы (любой элемент фильма)
+    PAGE_LOAD_CHECK_LOCATOR = (By.CSS_SELECTOR, "a[href*='/film/'], .film-title, h1")
 
-    RESULT_LIST = (By.CLASS_NAME, "search-results")
-    FIRST_RESULT = (By.CSS_SELECTOR, ".search-results .result:first-child")
+    def _wait_for_active_input(self, timeout=10):
+        """Ждет, пока поле ввода получит фокус (автофокус)"""
+        print(f"⏳ Ждем автофокуса в поле поиска (макс. {timeout} сек)...")
+        start_time = time.time()
 
-    @step("Нажать на вкладку «Все результаты»")
-    def click_all_results_tab(self):
-        wait = WebDriverWait(self.driver, 10)
-        tab = wait.until(EC.element_to_be_clickable(self.ALL_RESULTS_TAB))
-        tab.click()
+        while time.time() - start_time < timeout:
+            try:
+                active_elem = self.driver.switch_to.active_element
+                tag = active_elem.tag_name.lower()
+                input_type = active_elem.get_attribute("type")
 
-    @step("Нажать на вкладку «Онлайн‑кинотеатр»")
-    def click_online_cinema_tab(self):
-        wait = WebDriverWait(self.driver, 10)
-        tab = wait.until(EC.element_to_be_clickable(self.ONLINE_CINEMA_TAB))
-        tab.click()
+                # Проверяем, что это input и он активен
+                if tag == "input" and input_type in ["text", "search"]:
+                    # Дополнительная проверка: убедимся, что он не скрыт (display: none)
+                    if active_elem.is_displayed():
+                        print("✅ Автофокус найден!")
+                        return active_elem
+            except Exception:
+                pass
+            time.sleep(0.3)
 
-    @step("Вкладка «Все результаты» должна быть активной")
-    def verify_all_results_tab_active(self):
-        self._verify_tab_active(self.ALL_RESULTS_TAB)
+        raise TimeoutError("❌ Не удалось дождаться автофокуса в поле поиска. Возможно, оверлей не закрыт.")
 
-    @step("Вкладка «Онлайн‑кинотеатр» должна быть активной")
-    def verify_online_cinema_tab_active(self):
-        self._verify_tab_active(self.ONLINE_CINEMA_TAB)
+    def search_movie(self, query: str):
+        print(f"🎬 Начинаем поиск: '{query}'")
 
-    def _verify_tab_active(self, locator):
-        wait = WebDriverWait(self.driver, 10)
-        tab = wait.until(EC.visibility_of_element_located(locator))
-        assert tab.get_attribute("aria-selected") == "true", "Вкладка не активна"
+        # 1. Получаем поле ввода через автофокус
+        input_field = self._wait_for_active_input()
 
-    # Остальные методы (search, is_results_visible, click_first_result) остаются без изменений
-    @step("Выполнение поиска по запросу \"{query}\"")
-    def search(self, query: str):
-        wait = WebDriverWait(self.driver, 10)
-        input_field = wait.until(EC.element_to_be_clickable(self.SEARCH_INPUT))
+        # 2. Вводим текст
         input_field.clear()
         input_field.send_keys(query)
-        btn = wait.until(EC.element_to_be_clickable(self.SEARCH_BUTTON))
-        btn.click()
+        print(f"✅ Текст '{query}' введен.")
 
-    @step("Результаты поиска должны быть видны")
-    def is_results_visible(self):
-        wait = WebDriverWait(self.driver, 10)
-        results = wait.until(EC.visibility_of_element_located(self.RESULT_LIST))
-        assert results.is_displayed(), "Список результатов не появился"
+        # 3. Ждем появления списка подсказок и кликаем по первой
+        print("⏳ Ждем появления выпадающего списка подсказок...")
+        try:
+            # Ждем кликабельной ссылки на фильм в списке
+            suggestion_link = self.wait.until(EC.element_to_be_clickable(self.SUGGESTION_LINK_LOCATOR))
+            print("✅ Подсказка найдена, кликаем...")
+            self._js_click(suggestion_link)
+        except Exception as e:
+            print(f"⚠️ Список подсказок не появился или пуст. Пробуем нажать Enter...")
+            # Фоллбэк: если списка нет, жмем Enter в поле ввода
+            input_field.send_keys("\n")
 
-    @step("Перейти к первому результату поиска")
-    def click_first_result(self):
-        wait = WebDriverWait(self.driver, 10)
-        first_item = wait.until(EC.element_to_be_clickable(self.FIRST_RESULT))
-        first_item.click()
+        # 4. Ждем загрузки финальной страницы (без жесткого sleep, только по факту появления элемента)
+        print("⏳ Ждем загрузки страницы фильма...")
+        self.wait.until(EC.presence_of_element_located(self.PAGE_LOAD_CHECK_LOCATOR))
+        print("✅ Страница фильма начала загружаться.")
+
+    def wait_for_results(self):
+        """Финальная валидация: убеждаемся, что мы на странице фильма"""
+        print("🔍 Финальная проверка URL и элементов...")
+        # Проверяем, что в URL есть /film/
+        current_url = self.driver.current_url
+        assert "/film/" in current_url, f"Ожидался URL с /film/, но получили: {current_url}"
+
+        # Проверяем наличие элемента с ссылкой на фильм
+        element = self.wait.until(EC.visibility_of_element_located(self.SUGGESTION_LINK_LOCATOR))
+        href = element.get_attribute("href")
+        print(f"✅ Тест пройден! Целевой URL: {href}")
+        return element

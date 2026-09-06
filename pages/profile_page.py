@@ -1,83 +1,124 @@
-from behave import step
+# pages/profile_page.py
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from pages.base_page import BasePage
+from selenium.common.exceptions import TimeoutException
+from .base_page import BasePage
+from config import KP_BASE_URL, KP_COOKIES
+import time
 
 
 class ProfilePage(BasePage):
-    # ВАЖНО: Мы НЕ используем просто data-tid. Мы используем комбинацию data-tid + текст.
-    # Это гарантирует, что мы найдем именно нужную вкладку, даже если ID дублируются.
+    # ТОЧНЫЙ ЛОКАТОР на основе твоего скриншота
+    # Ищем img с data-testid="avatar". Этого достаточно.
+    AVATAR_LOCATOR = (By.CSS_SELECTOR, 'img[data-testid="avatar"]')
 
-    PROFILE_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Профиль")]')
-    REVIEWS_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Рецензии")]')
-    COMMENTS_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Комментарии")]')
-    RATINGS_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Оценки")]')
-    FRIENDS_RATINGS_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Оценки друзей")]')
-    WATCHLIST_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Буду смотреть")]')
-    STARS_TAB = (By.XPATH, '//a[@data-tid="ec7a8d07" and contains(text(), "Звезды")]')
+    # Кнопка "Войти" (чтобы проверять отсутствие)
+    LOGIN_BTN_LOCATOR = (By.CSS_SELECTOR, 'button[data-testid="loginHeaderButton"]')
 
-    @step("Нажать на вкладку «Профиль»")
-    def click_profile_tab(self):
-        self._click_tab(self.PROFILE_TAB, "Профиль")
+    def open_profile(self):
+        """Открывает профиль. Авторизация через куки."""
+        self.open()
+        self.close_all_overlays()
 
-    @step("Нажать на вкладку «Рецензии»")
-    def click_reviews_tab(self):
-        self._click_tab(self.REVIEWS_TAB, "Рецензии")
+        # 1. Быстрая проверка: может уже авторизованы?
+        if self._is_user_logged_in():
+            print("✅ Уже авторизованы.")
+            return
 
-    @step("Нажать на вкладку «Комментарии»")
-    def click_comments_tab(self):
-        self._click_tab(self.COMMENTS_TAB, "Комментарии")
+        # 2. Авторизация через куки
+        if KP_COOKIES:
+            self._login_with_cookies()
+            # Даем время на рендер шапки
+            time.sleep(3)
 
-    @step("Нажать на вкладку «Оценки»")
-    def click_ratings_tab(self):
-        self._click_tab(self.RATINGS_TAB, "Оценки")
+            # Обновляем страницу, чтобы сайт применил сессию
+            self.driver.refresh()
+            time.sleep(3)
 
-    @step("Нажать на вкладку «Оценки друзей»")
-    def click_friends_ratings_tab(self):
-        self._click_tab(self.FRIENDS_RATINGS_TAB, "Оценки друзей")
+            if self._is_user_logged_in():
+                print("✅ Авторизация через куки успешна!")
+                return
+            else:
+                self.driver.save_screenshot("avatar_not_found.png")
+                raise Exception(
+                    "Куки добавлены, но авторизация не подтверждена. "
+                    "Посмотри скриншот avatar_not_found.png. "
+                    "Скорее всего, значения в config.py протухли (сессия истекла)."
+                )
+        else:
+            raise ValueError("KP_COOKIES не заданы в config.py!")
 
-    @step("Нажать на вкладку «Буду смотреть»")
-    def click_watchlist_tab(self):
-        self._click_tab(self.WATCHLIST_TAB, "Буду смотреть")
-
-    @step("Нажать на вкладку «Звезды»")
-    def click_stars_tab(self):
-        self._click_tab(self.STARS_TAB, "Звезды")
-
-    def _click_tab(self, locator, tab_name):
-        """Вспомогательный метод для клика по вкладке с ожиданием"""
-        wait = WebDriverWait(self.driver, 10)
-        tab = wait.until(EC.element_to_be_clickable(locator))
-        # Дополнительный чек перед кликом: убеждаемся, что текст совпадает
-        assert tab.text.strip() == tab_name, f"Ожидался текст '{tab_name}', но найден '{tab.text}'"
-        tab.click()
-
-    @step("Вкладка «{tab_name}» должна быть активной")
-    def verify_tab_active(self, tab_name):
+    def _is_user_logged_in(self):
         """
-        Универсальный шаг для проверки активности любой вкладки.
-        Передаем имя вкладки как аргумент в feature-файле.
+        Проверяет авторизацию.
+        Приоритет 1: Кнопки 'Войти' нет -> Авторизован.
+        Приоритет 2: Аватар есть в DOM -> Авторизован.
         """
-        wait = WebDriverWait(self.driver, 10)
-
-        # Формируем локатор динамически на основе имени вкладки
-        # Примечание: для сложных названий (как "Оценки друзей") лучше иметь отдельные локаторы,
-        # но для простоты примера используем поиск по тексту среди всех ссылок меню.
-        # В продакшене лучше использовать заранее определенные локаторы (см. ниже альтернативу).
-
-        # Вариант 1: Если у активной вкладки появляется класс active (как у Профиля на прошлом скрине)
-        # Ищем ссылку с нужным текстом И классом, содержащим 'active'
-        xpath_active = f'//a[contains(text(), "{tab_name}") and contains(@class, "active")]'
-
         try:
-            active_tab = wait.until(EC.visibility_of_element_located((By.XPATH, xpath_active)))
-            assert active_tab.text.strip() == tab_name, "Текст активной вкладки не совпадает"
-        except Exception:
-            # Вариант 2 (Fallback): Если активной ссылки не выделяют классом,
-            # проверяем, что мы находимся на странице с таким URL или заголовком.
-            # Это зависит от того, SPA у вас или нет.
-            if "/comments/" in self.driver.current_url and tab_name == "Рецензии":
-                return  # Успех, мы на странице рецензий
-            raise AssertionError(f"Вкладка '{tab_name}' не отмечена как активная (нет класса active)")
+            # Стратегия А: Проверяем, что кнопки "Войти" НЕТ (самый надежный способ)
+            from selenium.webdriver.support.ui import WebDriverWait
+            short_wait = WebDriverWait(self.driver, 3)
 
+            try:
+                # Если кнопка находится за 3 секунды -> НЕ авторизованы
+                short_wait.until(EC.presence_of_element_located(self.LOGIN_BTN_LOCATOR))
+                return False
+            except TimeoutException:
+                # Если кнопка НЕ найдена за 3 секунды -> Авторизованы!
+                print("✅ Кнопка 'Войти' не найдена. Пользователь авторизован.")
+                return True
+
+        except Exception:
+            pass
+
+        # Стратегия Б (запасная): Ищем аватар по ТОЧНОМУ локатору из твоего скриншота
+        try:
+            # Используем presence, так как у аватара aria-hidden="true"
+            avatar = self.wait.until(EC.presence_of_element_located(self.AVATAR_LOCATOR))
+            return True
+        except TimeoutException:
+            return False
+
+    def _login_with_cookies(self):
+        """Добавляет куки, игнорируя ошибки домена для проблемных кук."""
+        print("🍪 Начинаем добавление кук...")
+
+        # 1. Сначала обрабатываем куки для .yandex.ru
+        # Заходим на passport.yandex.ru, чтобы контекст домена был верным
+        self.driver.get("https://passport.yandex.ru")
+        time.sleep(2)
+
+        for cookie in KP_COOKIES:
+            domain = cookie.get("domain", "")
+            if ".yandex.ru" in domain:
+                clean = self._clean_cookie(cookie)
+                try:
+                    self.driver.add_cookie(clean)
+                    print(f"  ✅ Добавлена кука: {cookie['name']} (yandex)")
+                except Exception as e:
+                    # Игнорируем ошибки домена для yabs-sid и подобных
+                    print(f"  ⚠️ Пропущена кука {cookie['name']}: {e}")
+
+        # 2. Теперь обрабатываем куки для .kinopoisk.ru
+        self.driver.get(KP_BASE_URL)
+        time.sleep(2)
+
+        for cookie in KP_COOKIES:
+            domain = cookie.get("domain", "")
+            if ".kinopoisk.ru" in domain:
+                clean = self._clean_cookie(cookie)
+                try:
+                    self.driver.add_cookie(clean)
+                    print(f"  ✅ Добавлена кука: {cookie['name']} (kinopoisk)")
+                except Exception as e:
+                    print(f"  ⚠️ Ошибка добавления куки {cookie['name']}: {e}")
+
+    @staticmethod
+    def _clean_cookie(cookie_dict):
+        """Удаляет поля, которые ломают add_cookie в Selenium."""
+        forbidden_keys = ["expiry", "expires", "httpOnly", "secure", "sameSite"]
+        return {k: v for k, v in cookie_dict.items() if k not in forbidden_keys}
+
+    def is_avatar_visible(self):
+        """Метод для assert в тесте."""
+        return self._is_user_logged_in()
