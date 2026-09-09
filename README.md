@@ -130,7 +130,7 @@ allure open ./allure-report
 ### Ссылки
 
 -   ****Документация Pytest****:https://docs.pytest.org/en/stable/ 
--   ****Документация Allure****:
+-   ****Документация Allure****:https://allurereport.org/docs/ 
 
 ### Важные комментарии
 
