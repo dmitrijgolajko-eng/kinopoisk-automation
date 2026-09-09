@@ -1,3 +1,5 @@
+from typing import Optional
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -34,7 +36,7 @@ class MoviePage(BasePage):
     def __init__(self, driver, base_url=None):
         super().__init__(driver, base_url)
 
-    def open(self, url: str):
+    def open(self, url: Optional[str] = None) -> None:
         """Открывает страницу фильма и ждет загрузки заголовка."""
         if not url:
             raise ValueError("Для MoviePage необходимо передать URL фильма")
