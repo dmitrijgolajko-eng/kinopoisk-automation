@@ -135,4 +135,3 @@ class ProfilePage(BasePage):
             return True
         except TimeoutException:
             return False
-

@@ -1,9 +1,10 @@
 from typing import Optional, Tuple
+
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
 
 from .base_page import BasePage
 
@@ -26,7 +27,10 @@ class SearchPage(BasePage):
         By.CSS_SELECTOR,
         'div[data-tid="suggest-list"]',
     )
-    SUGGESTION_LINK_LOCATOR: Tuple[By, str] = (By.CSS_SELECTOR, 'a[href*="/film/"]')
+    SUGGESTION_LINK_LOCATOR: Tuple[By, str] = (
+        By.CSS_SELECTOR,
+        'a[href*="/film/"]',
+    )
 
     def search_movie(self, query: str) -> None:
         print(f"🎬 Начинаем поиск: '{query}'")
@@ -133,4 +137,3 @@ class SearchPage(BasePage):
         except Exception as e:
             print(f"Ошибка при получении заголовка: {e}")
             return None
-

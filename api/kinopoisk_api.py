@@ -11,7 +11,7 @@ class KinopoiskAPI:
         base_url: str,
         api_version: str,
         headers: Dict[str, str],
-        timeout: int = 10
+        timeout: int = 10,
     ):
         self.base_url: str = base_url
         self.api_version: str = api_version
@@ -24,7 +24,7 @@ class KinopoiskAPI:
         method: str,
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> Any:
         url = f"{self.base_url}/{self.api_version}/{endpoint}"
         try:
@@ -37,7 +37,7 @@ class KinopoiskAPI:
                 headers=self.headers,
                 params=params,
                 json=data,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
 
             self.logger.debug(f"Статус: {response.status_code}")
@@ -54,26 +54,15 @@ class KinopoiskAPI:
             self.logger.error(f"Ошибка при запросе к {url}: {e}")
             raise
 
-    def search_movies(
-        self,
-        query: str,
-        page: int = 1,
-        limit: int = 10
-    ) -> Any:
+    def search_movies(self, query: str, page: int = 1, limit: int = 10) -> Any:
         params = {"query": query, "page": page, "limit": limit}
         return self._request("GET", "movie/search", params=params)
 
-    def get_movie_by_id(
-        self,
-        movie_id: int
-    ) -> Any:
+    def get_movie_by_id(self, movie_id: int) -> Any:
         return self._request("GET", f"movie/{movie_id}")
 
     def get_reviews(
-        self,
-        movie_id: int,
-        page: int = 1,
-        limit: int = 10
+        self, movie_id: int, page: int = 1, limit: int = 10
     ) -> Any:
         params = {"movieId": movie_id, "page": page, "limit": limit}
         return self._request("GET", "../v1.5/review", params=params)
@@ -87,7 +76,7 @@ class KinopoiskAPI:
         page: int = 1,
         limit: int = 10,
         year: Optional[int] = None,
-        content_type: Optional[str] = None
+        content_type: Optional[str] = None,
     ) -> Any:
         params = {"query": query, "page": page, "limit": limit}
         if year is not None:

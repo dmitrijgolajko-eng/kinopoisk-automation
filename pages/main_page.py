@@ -8,14 +8,20 @@ from .base_page import BasePage
 
 
 class MainPage(BasePage):
-    HEADER_LOCATOR: Tuple[By, str] = (By.CSS_SELECTOR, "[data-test-id='header']")
+    HEADER_LOCATOR: Tuple[By, str] = (
+        By.CSS_SELECTOR,
+        "[data-test-id='header']",
+    )
     HEADER_FALLBACK: Tuple[By, str] = (By.TAG_NAME, "header")
 
     SEARCH_INPUT_LOCATOR: Tuple[By, str] = (
         By.XPATH,
         "//input[@placeholder='Фильмы, сериалы, персоны']",
     )
-    SEARCH_INPUT_FALLBACK: Tuple[By, str] = (By.CSS_SELECTOR, "input[type='search']")
+    SEARCH_INPUT_FALLBACK: Tuple[By, str] = (
+        By.CSS_SELECTOR,
+        "input[type='search']",
+    )
 
     # Обновлённые локаторы для кнопки профиля (с учётом изменений верстки)
     PROFILE_BUTTON_LOCATOR: Tuple[By, str] = (
@@ -33,7 +39,10 @@ class MainPage(BasePage):
         By.XPATH,
         "//div[@role='region' and @aria-label='Промо']",
     )
-    BANNER_FALLBACK: Tuple[By, str] = (By.XPATH, "//h2[contains(text(), 'Популярные фильмы')]")
+    BANNER_FALLBACK: Tuple[By, str] = (
+        By.XPATH,
+        "//h2[contains(text(), 'Популярные фильмы')]",
+    )
     BANNER_LINK_LOCATOR: Tuple[By, str] = (
         By.XPATH,
         "//a[contains(@href, 'hd.kinopoisk.ru/film')]",

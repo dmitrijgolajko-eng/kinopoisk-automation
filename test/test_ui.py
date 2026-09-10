@@ -1,18 +1,20 @@
 from urllib.parse import urlparse
 
-import allure
-import pytest
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-
 from config import KP_BASE_URL
 from pages.main_page import MainPage
 from pages.movie_page import MoviePage
 from pages.profile_page import ProfilePage
 from pages.search_page import SearchPage
+import allure
+import pytest
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    TimeoutException,
+)
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Актуальный ID фильма
 TEST_MOVIE_ID = 258687  # Интерстеллар
@@ -195,15 +197,6 @@ def test_video_player_availability(driver):
             )
 
 
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, \
-    StaleElementReferenceException
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-import pytest
-import allure
-
-
 @allure.feature("Поиск")
 @allure.story("Навигация из поиска")
 @allure.title("Проверка навигации из поиска на страницу фильма")
@@ -225,13 +218,22 @@ def test_search_to_movie_page_navigation(driver):
 
     with allure.step("Проверяем наличие результатов поиска"):
         # Ждем появления карточки фильма
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-test-id="movie-list-item"]')))
-        results = search_page.driver.find_elements(By.CSS_SELECTOR, 'div[data-test-id="movie-list-item"]')
+        wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, 'div[data-test-id="movie-list-item"]')
+            )
+        )
+        results = search_page.driver.find_elements(
+            By.CSS_SELECTOR, 'div[data-test-id="movie-list-item"]'
+        )
         assert len(results) > 0, "Результаты поиска не найдены"
 
     with allure.step("Кликаем по первому результату"):
         # ИСПРАВЛЕНИЕ 1: Используем точный data-test-id="next-link" из DOM
-        target_locator = (By.CSS_SELECTOR, 'a[data-test-id="next-link"][href*="/film/"]')
+        target_locator = (
+            By.CSS_SELECTOR,
+            'a[data-test-id="next-link"][href*="/film/"]',
+        )
 
         # 1. Ждем кликабельности
         element = wait.until(EC.element_to_be_clickable(target_locator))
@@ -266,7 +268,11 @@ def test_search_to_movie_page_navigation(driver):
         if not clicked:
             pytest.fail("Не удалось выполнить клик ни одним из способов")
 
-        allure.attach(driver.get_screenshot_as_png(), name="Клик выполнен", attachment_type=allure.attachment_type.PNG)
+        allure.attach(
+            driver.get_screenshot_as_png(),
+            name="Клик выполнен",
+            attachment_type=allure.attachment_type.PNG,
+        )
 
     with allure.step("Проверяем факт перехода на страницу фильма"):
         # ИСПРАВЛЕНИЕ 2: Обновленные индикаторы на основе вашего скриншота
@@ -274,7 +280,7 @@ def test_search_to_movie_page_navigation(driver):
         # 2. Поиск по тексту (самый надежный fallback, если ID изменится)
         film_page_indicators = [
             (By.CSS_SELECTOR, 'span[data-tid="45f60312"]'),
-            (By.XPATH, "//*[contains(text(), 'Интерстеллар')]")
+            (By.XPATH, "//*[contains(text(), 'Интерстеллар')]"),
         ]
 
         transition_success = False
@@ -293,21 +299,36 @@ def test_search_to_movie_page_navigation(driver):
         if not transition_success:
             current_url = driver.current_url
             if "/film/" in current_url:
-                allure.attach(driver.get_screenshot_as_png(), name="Переход подтвержден по URL",
-                              attachment_type=allure.attachment_type.PNG)
-                print(f"⚠️ Переход подтвержден по URL: {current_url} (элементы еще не отрендерились)")
+                allure.attach(
+                    driver.get_screenshot_as_png(),
+                    name="Переход подтвержден по URL",
+                    attachment_type=allure.attachment_type.PNG,
+                )
+                print(
+                    f"⚠️ Переход подтвержден по URL: {current_url} "
+                    f"(элементы еще не отрендерились)"
+                )
                 transition_success = True
                 found_reason = "Переход подтвержден по наличию '/film/' в URL"
 
-        if not transition_success:
-            allure.attach(driver.get_screenshot_as_png(), name="Финальный скриншот (переход не подтвержден)",
-                          attachment_type=allure.attachment_type.PNG)
-            pytest.fail(
-                f"Клик выполнен, но переход не подтвержден. {found_reason or 'Не найдены индикаторы и URL не изменился.'}")
+                if not transition_success:
+                    allure.attach(
+                        driver.get_screenshot_as_png(),
+                        name="Финальный скриншот (переход не подтвержден)",
+                        attachment_type=allure.attachment_type.PNG,
+                    )
+                    pytest.fail(
+                        f"Клик выполнен, но переход не подтвержден. "
+                        f"{found_reason or 'Не найдены индикаторы '
+                                           'и URL не изменился.'}"
+                    )
 
-        allure.attach(driver.get_screenshot_as_png(), name="Успешный переход подтвержден",
-                      attachment_type=allure.attachment_type.PNG)
-        print(f"✅ Переход успешен: {found_reason}")
+                allure.attach(
+                    driver.get_screenshot_as_png(),
+                    name="Успешный переход подтвержден",
+                    attachment_type=allure.attachment_type.PNG,
+                )
+                print(f"✅ Переход успешен: {found_reason}")
 
 
 @allure.feature("Профиль")

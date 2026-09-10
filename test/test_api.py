@@ -122,23 +122,23 @@ def test_get_movie_rating(api_client: KinopoiskAPI):
         # Проверяем конкретные рейтинги с учетом их шкал
         for rating_source, rating_value in rating_data.items():
             with step(f"Проверяем рейтинг от {rating_source}"):
-                assert isinstance(
-                    rating_value, (float, int)
-                ), (f"Рейтинг {rating_source} должен быть числом,"
-                    f" получен {type(rating_value)}")
+                assert isinstance(rating_value, (float, int)), (
+                    f"Рейтинг {rating_source} должен быть числом,"
+                    f" получен {type(rating_value)}"
+                )
 
                 if rating_source == "russianFilmCritics":
                     # Для критиков может быть шкала до 100
-                    assert (
-                        0 <= rating_value <= 100
-                    ), (f"Рейтинг {rating_source} вне допустимого"
-                        f" диапазона [0, 100]: {rating_value}")
+                    assert 0 <= rating_value <= 100, (
+                        f"Рейтинг {rating_source} вне допустимого"
+                        f" диапазона [0, 100]: {rating_value}"
+                    )
                 else:
                     # Для остальных рейтингов шкала 0-10
-                    assert (
-                        0 <= rating_value <= 10
-                    ), (f"Рейтинг {rating_source} вне допустимого"
-                        f" диапазона [0, 10]: {rating_value}")
+                    assert 0 <= rating_value <= 10, (
+                        f"Рейтинг {rating_source} вне допустимого"
+                        f" диапазона [0, 10]: {rating_value}"
+                    )
 
         # Проверяем голоса
         assert "votes" in response, "Отсутствуют данные о голосах"
@@ -184,10 +184,10 @@ def test_get_movie_rating(api_client: KinopoiskAPI):
                     assert isinstance(
                         count, int
                     ), f"Количество голосов {source} должно быть целым числом"
-                    assert (
-                        count >= 0
-                    ), (f"Количество голосов {source} должно быть"
-                        f" неотрицательным")
+                    assert count >= 0, (
+                        f"Количество голосов {source} должно быть"
+                        f" неотрицательным"
+                    )
 
         # Проверяем наличие основной информации
         assert "type" in response, "Отсутствует тип контента"
@@ -355,14 +355,14 @@ def test_api_search_with_filters(api_client: KinopoiskAPI):
         for i, movie in enumerate(docs):
             with step(f"Проверяем результат #{i + 1}: '{movie.get('name')}'"):
                 movie_type = movie.get("type")
-                assert (
-                    movie_type == target_type
-                ), (f"Тип контента не совпадает: "
-                    f"ожидаем '{target_type}', получаем '{movie_type}'")
+                assert movie_type == target_type, (
+                    f"Тип контента не совпадает: "
+                    f"ожидаем '{target_type}', получаем '{movie_type}'"
+                )
 
                 movie_year = movie.get("year")
                 if movie_year is not None:
-                    assert (
-                        movie_year == target_year
-                    ), (f"Год не совпадает: ожидаем {target_year},"
-                        f" получаем {movie_year}")
+                    assert movie_year == target_year, (
+                        f"Год не совпадает: ожидаем {target_year},"
+                        f" получаем {movie_year}"
+                    )

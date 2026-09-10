@@ -1,6 +1,6 @@
-from typing import Optional, Tuple, List  # Добавляем импорт Tuple
+from typing import List, Optional, Tuple  # Добавляем импорт Tuple
 
-from selenium.common import WebDriverException, StaleElementReferenceException
+from selenium.common import StaleElementReferenceException, WebDriverException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -8,17 +8,16 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 
 class BasePage:
-    def __init__(
-        self,
-        driver: WebDriver,
-        base_url: Optional[str] = None
-    ):
+    def __init__(self, driver: WebDriver, base_url: Optional[str] = None):
         self.driver: WebDriver = driver
         self.base_url: Optional[str] = base_url
-        self.wait: WebDriverWait = WebDriverWait(driver, 15, poll_frequency=0.5)
+        self.wait: WebDriverWait = WebDriverWait(
+            driver, 15, poll_frequency=0.5
+        )
 
     def open(self, url: Optional[str] = None) -> None:
-        # Явно определяем целевой URL: приоритет у переданного url, иначе base_url
+        # Явно определяем целевой URL:
+        # приоритет у переданного url, иначе base_url
         target = url or self.base_url
 
         # Проверка на None или пустую строку
@@ -30,10 +29,7 @@ class BasePage:
 
         self.driver.get(target)
 
-    def _js_click(
-        self,
-        element: WebElement
-    ) -> bool:
+    def _js_click(self, element: WebElement) -> bool:
         """Выполняет клик через JavaScript. Возвращает True при успехе."""
         if element is None:
             return False
@@ -68,19 +64,24 @@ class BasePage:
         for by, selector in overlay_selectors:
             try:
                 # Ищем все элементы по селектору
-                elements: List[WebElement] = self.driver.find_elements(by, selector)
+                elements: List[WebElement] = self.driver.find_elements(
+                    by, selector
+                )
             except WebDriverException:
-                # Если ошибка при поиске (редко, но бывает при краше страницы), пропускаем селектор
+                # Если ошибка при поиске (редко,
+                # но бывает при краше страницы), пропускаем селектор
                 continue
 
             for el in elements:
                 try:
-                    # Проверяем видимость. Это место, где чаще всего возникает StaleElementReferenceException
+                    # Проверяем видимость. Это место,
+                    # где чаще всего возникает StaleElementReferenceException
                     if el.is_displayed():
                         if self._js_click(el):
                             closed_any = True
                 except (WebDriverException, StaleElementReferenceException):
-                    # Элемент мог исчезнуть или стать невалидным, просто пропускаем его
+                    # Элемент мог исчезнуть или стать невалидным,
+                    # просто пропускаем его
                     continue
 
         return closed_any
