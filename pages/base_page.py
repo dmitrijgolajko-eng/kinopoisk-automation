@@ -34,7 +34,7 @@ class BasePage:
         if element is None:
             return False
         try:
-            self.driver.execute_script("arguments.click();", element)
+            self.driver.execute_script("arguments[0].click();", element)
             return True
         except WebDriverException:
             return False
