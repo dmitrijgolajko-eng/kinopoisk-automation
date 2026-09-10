@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -7,19 +9,19 @@ from .base_page import BasePage
 
 class ProfilePage(BasePage):
     # Локатор аватара (как на скриншоте)
-    AVATAR_LOCATOR = (
+    AVATAR_LOCATOR: Tuple[By, str] = (
         By.CSS_SELECTOR,
         'span.styles_icon__GyCFg[style*="background-image"]',
     )
-    LOGIN_BTN_LOCATOR = (
+    LOGIN_BTN_LOCATOR: Tuple[By, str] = (
         By.CSS_SELECTOR,
         'button[data-testid="loginHeaderButton"]',
     )
 
     # Основной URL профиля Кинопоиска
-    PROFILE_URL = "/my/"
+    PROFILE_URL: str = "/my/"
 
-    def open_profile(self):
+    def open_profile(self) -> None:
         self.open()
         self.close_all_overlays()
 
@@ -32,7 +34,7 @@ class ProfilePage(BasePage):
             print(
                 "🔄 Переходим на страницу профиля для проверки авторизации..."
             )
-            profile_url = self.base_url.rstrip("/") + self.PROFILE_URL
+            profile_url: str = self.base_url.rstrip("/") + self.PROFILE_URL
             self.driver.get(profile_url)
             self.close_all_overlays()
 
@@ -58,7 +60,7 @@ class ProfilePage(BasePage):
                 try:
                     # Вариант А: Ждем появления имени пользователя
                     # (более надежно)
-                    name_locator = (
+                    name_locator: Tuple[By, str] = (
                         By.XPATH,
                         "//h1[contains(text(), 'Дмитрий')]",
                     )
@@ -69,8 +71,6 @@ class ProfilePage(BasePage):
                 except TimeoutException:
                     # Вариант Б: Если имя не нашли,
                     # пробуем найти аватар на странице ID
-                    # Примечание: классы на id.yandex.ru могут отличаться,
-                    # этот селектор может потребовать правки
                     try:
                         self.wait.until(
                             EC.visibility_of_element_located(
@@ -106,11 +106,11 @@ class ProfilePage(BasePage):
             self.driver.save_screenshot("profile_load_error.png")
             raise Exception(
                 "Не удалось загрузить страницу профиля "
-                "Кинопоиска после возврата."
-                " Сохранил скриншот profile_load_error.png"
+                "Кинопоиска после возврата. "
+                "Сохранил скриншот profile_load_error.png"
             )
 
-    def _is_user_logged_in(self):
+    def _is_user_logged_in(self) -> bool:
         try:
             # Проверяем отсутствие кнопки "Войти"
             self.wait.until_not(
@@ -127,7 +127,7 @@ class ProfilePage(BasePage):
             except TimeoutException:
                 return False
 
-    def is_avatar_visible(self):
+    def is_avatar_visible(self) -> bool:
         try:
             self.wait.until(
                 EC.visibility_of_element_located(self.AVATAR_LOCATOR)
@@ -135,3 +135,4 @@ class ProfilePage(BasePage):
             return True
         except TimeoutException:
             return False
+

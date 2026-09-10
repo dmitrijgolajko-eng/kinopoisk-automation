@@ -1,40 +1,56 @@
-from typing import Optional
+from typing import Optional, Tuple, List  # Добавляем импорт Tuple
 
+from selenium.common import WebDriverException, StaleElementReferenceException
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 
 
 class BasePage:
-    def __init__(self, driver, base_url: Optional[str] = None):
-        self.driver = driver
-        self.base_url = base_url
-        self.wait = WebDriverWait(driver, 15, poll_frequency=0.5)
+    def __init__(
+        self,
+        driver: WebDriver,
+        base_url: Optional[str] = None
+    ):
+        self.driver: WebDriver = driver
+        self.base_url: Optional[str] = base_url
+        self.wait: WebDriverWait = WebDriverWait(driver, 15, poll_frequency=0.5)
 
     def open(self, url: Optional[str] = None) -> None:
-        target = url if url else self.base_url
+        # Явно определяем целевой URL: приоритет у переданного url, иначе base_url
+        target = url or self.base_url
+
+        # Проверка на None или пустую строку
         if not target:
-            raise ValueError("URL не передан и base_url не установлен")
+            raise ValueError(
+                "Не удалось определить URL для перехода: "
+                "аргумент url не передан и атрибут base_url не установлен."
+            )
+
         self.driver.get(target)
 
-    def _js_click(self, element) -> bool:
-        if not element:
+    def _js_click(
+        self,
+        element: WebElement
+    ) -> bool:
+        """Выполняет клик через JavaScript. Возвращает True при успехе."""
+        if element is None:
             return False
         try:
-            self.driver.execute_script("arguments[0].click();", element)
+            self.driver.execute_script("arguments.click();", element)
             return True
-        except Exception:
+        except WebDriverException:
             return False
 
     def close_all_overlays(self) -> bool:
         """
-        Закрывает модальные окна, баннеры и оверлеи Кинопоиска.
-        Использует короткий таймаут (2 сек), чтобы не тормозить тест.
+        Закрывает модальные окна, баннеры и оверлеи.
+        Возвращает True, если было закрыто хотя бы одно окно.
         """
-        closed_any = False
+        closed_any: bool = False
 
-        # Все возможные селекторы оверлеев в одном списке
-        overlay_selectors = [
-            # Кнопки закрытия
+        overlay_selectors: List[Tuple[By, str]] = [
             (By.CSS_SELECTOR, "button[aria-label='Закрыть']"),
             (By.CSS_SELECTOR, "button[aria-label='Close']"),
             (By.CSS_SELECTOR, "[data-testid='close-modal']"),
@@ -42,26 +58,29 @@ class BasePage:
             (By.CSS_SELECTOR, "[data-test-id='close']"),
             (By.CSS_SELECTOR, ".close-icon"),
             (By.CSS_SELECTOR, ".close-btn"),
-            # Оверлеи (клик по фону закрывает окно)
             (By.CSS_SELECTOR, "div.overlay"),
             (By.CSS_SELECTOR, "div.modal-overlay"),
             (By.CSS_SELECTOR, "[data-testid='overlay']"),
-            # Баннер авторизации/подписки
             (By.CSS_SELECTOR, "[data-test-id='auth-banner-close']"),
             (By.CSS_SELECTOR, "[data-test-id='overlay-close']"),
         ]
 
         for by, selector in overlay_selectors:
             try:
-                elements = self.driver.find_elements(by, selector)
-                for el in elements:
+                # Ищем все элементы по селектору
+                elements: List[WebElement] = self.driver.find_elements(by, selector)
+            except WebDriverException:
+                # Если ошибка при поиске (редко, но бывает при краше страницы), пропускаем селектор
+                continue
+
+            for el in elements:
+                try:
+                    # Проверяем видимость. Это место, где чаще всего возникает StaleElementReferenceException
                     if el.is_displayed():
                         if self._js_click(el):
                             closed_any = True
-                        import time
-
-                        time.sleep(0.3)
-            except Exception:
-                continue
+                except (WebDriverException, StaleElementReferenceException):
+                    # Элемент мог исчезнуть или стать невалидным, просто пропускаем его
+                    continue
 
         return closed_any

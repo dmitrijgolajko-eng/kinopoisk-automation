@@ -1,36 +1,38 @@
+from typing import Optional, Tuple
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.remote.webelement import WebElement
 
 from .base_page import BasePage
 
 
 class SearchPage(BasePage):
     # Локаторы
-    SEARCH_INPUT_LOCATOR = (
+    SEARCH_INPUT_LOCATOR: Tuple[By, str] = (
         By.CSS_SELECTOR,
         'input[placeholder="Фильмы, сериалы, персоны"]',
     )
     # Локатор карточки результата (первая карточка в выдаче)
-    FIRST_RESULT_LOCATOR = (
+    FIRST_RESULT_LOCATOR: Tuple[By, str] = (
         By.CSS_SELECTOR,
         'div[data-test-id="movie-list-item"]',
     )
 
     # Локаторы для подсказок (используются только для проверки наличия,
     # не для клика)
-    SUGGESTION_CONTAINER_LOCATOR = (
+    SUGGESTION_CONTAINER_LOCATOR: Tuple[By, str] = (
         By.CSS_SELECTOR,
         'div[data-tid="suggest-list"]',
     )
-    SUGGESTION_LINK_LOCATOR = (By.CSS_SELECTOR, 'a[href*="/film/"]')
+    SUGGESTION_LINK_LOCATOR: Tuple[By, str] = (By.CSS_SELECTOR, 'a[href*="/film/"]')
 
-    def search_movie(self, query: str):
+    def search_movie(self, query: str) -> None:
         print(f"🎬 Начинаем поиск: '{query}'")
 
         # 1. Находим поле ввода
-        input_field = self.wait.until(
+        input_field: WebElement = self.wait.until(
             EC.element_to_be_clickable(self.SEARCH_INPUT_LOCATOR)
         )
 
@@ -51,7 +53,7 @@ class SearchPage(BasePage):
         # 4. Ждем результатов выдачи
         self.wait_for_results()
 
-    def wait_for_results(self):
+    def wait_for_results(self) -> None:
         """Ожидание загрузки результатов поиска"""
         print("⏳ Ожидаем появления и видимости результатов поиска...")
 
@@ -60,7 +62,7 @@ class SearchPage(BasePage):
             # visibility_of_element_located гарантирует,
             # что элемент имеет размер > 0
             # и не скрыт (display: none / opacity: 0).
-            result_element = self.wait.until(
+            result_element: WebElement = self.wait.until(
                 EC.visibility_of_element_located(self.FIRST_RESULT_LOCATOR)
             )
 
@@ -87,14 +89,48 @@ class SearchPage(BasePage):
             )
             print("✅ Элементы выдачи найдены (альтернативный селектор)")
 
-    def get_search_results_count(self):
+    def get_search_results_count(self) -> int:
         """Возвращает количество найденных результатов"""
         try:
             # Исправляем локатор на актуальный
-            results = self.driver.find_elements(
+            results: list[WebElement] = self.driver.find_elements(
                 By.CSS_SELECTOR, 'div[data-test-id="movie-list-item"]'
             )
             return len(results)
         except Exception as e:
             print(f"Ошибка при подсчете результатов: {e}")
             return 0
+
+    def is_search_input_visible(self) -> bool:
+        """Проверяет видимость поля поиска"""
+        try:
+            self.wait.until(
+                EC.visibility_of_element_located(self.SEARCH_INPUT_LOCATOR)
+            )
+            return True
+        except TimeoutException:
+            return False
+
+    def are_suggestions_visible(self) -> bool:
+        """Проверяет видимость подсказок"""
+        try:
+            self.wait.until(
+                EC.visibility_of_element_located(
+                    self.SUGGESTION_CONTAINER_LOCATOR
+                )
+            )
+            return True
+        except TimeoutException:
+            return False
+
+    def get_first_result_title(self) -> Optional[str]:
+        """Получает заголовок первого результата поиска"""
+        try:
+            result_element: WebElement = self.wait.until(
+                EC.visibility_of_element_located(self.FIRST_RESULT_LOCATOR)
+            )
+            return result_element.text.strip()
+        except Exception as e:
+            print(f"Ошибка при получении заголовка: {e}")
+            return None
+
